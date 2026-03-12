@@ -1,0 +1,5 @@
+{
+  "name": "Calculadora de Custos Marketplace",
+  "description": "Sistema para cálculo de custos operacionais de marketplace baseado em peso, preço e tipo de anúncio.",
+  "requestFramePermissions": []
+}
