@@ -52,6 +52,10 @@ export default function App() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const formatMoney = (value: number) => {
+    return value.toFixed(2).replace('.', ',');
+  };
+
   React.useEffect(() => {
     localStorage.setItem('marketplace_products', JSON.stringify(products));
   }, [products]);
@@ -600,24 +604,24 @@ export default function App() {
               >
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Faturamento Total</p>
-                  <p className="text-xl font-bold font-mono">R$ {globalSummary.totalRevenue.toFixed(2)}</p>
+                  <p className="text-xl font-bold font-mono">R$ {formatMoney(globalSummary.totalRevenue)}</p>
                 </div>
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Custo Mercadoria</p>
-                  <p className="text-xl font-bold font-mono text-orange-600">R$ {globalSummary.totalCostPrice.toFixed(2)}</p>
+                  <p className="text-xl font-bold font-mono text-orange-600">R$ {formatMoney(globalSummary.totalCostPrice)}</p>
                 </div>
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Total Comissões</p>
-                  <p className="text-xl font-bold font-mono text-red-500">R$ {globalSummary.totalAdFees.toFixed(2)}</p>
+                  <p className="text-xl font-bold font-mono text-red-500">R$ {formatMoney(globalSummary.totalAdFees)}</p>
                 </div>
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Total Fretes</p>
-                  <p className="text-xl font-bold font-mono text-red-500">R$ {globalSummary.totalShipping.toFixed(2)}</p>
+                  <p className="text-xl font-bold font-mono text-red-500">R$ {formatMoney(globalSummary.totalShipping)}</p>
                 </div>
                 <div className="bg-emerald-600 p-4 rounded-2xl shadow-lg text-white col-span-2 md:col-span-1 flex flex-col justify-between">
                   <div>
                     <p className="text-[10px] font-bold text-white/70 uppercase mb-1">Lucro Líquido</p>
-                    <p className="text-xl font-bold font-mono">R$ {globalSummary.totalProfit.toFixed(2)}</p>
+                    <p className="text-xl font-bold font-mono">R$ {formatMoney(globalSummary.totalProfit)}</p>
                   </div>
                   <div className="mt-2">
                     <div className="flex justify-between text-[8px] font-bold uppercase mb-1">
@@ -926,20 +930,20 @@ export default function App() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center pb-2 border-white/10 border-b">
                       <span className="text-white/60 text-sm">Preço de Venda</span>
-                      <span className="font-mono font-bold">R$ {currentCalculation.price.toFixed(2)}</span>
+                      <span className="font-mono font-bold">R$ {formatMoney(currentCalculation.price)}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-white/10 border-b">
                       <span className="text-white/60 text-sm">Comissão ({currentCalculation.adFeePercent.toFixed(0)}%)</span>
-                      <span className="font-mono">R$ {currentCalculation.adFee.toFixed(2)}</span>
+                      <span className="font-mono">R$ {formatMoney(currentCalculation.adFee)}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-white/10 border-b">
                       <span className="text-white/60 text-sm">{marketplace === 'mercadolivre' ? 'Frete ML' : 'Taxa Fixa'}</span>
-                      <span className="font-mono">R$ {currentCalculation.shippingCost.toFixed(2)}</span>
+                      <span className="font-mono">R$ {formatMoney(currentCalculation.shippingCost)}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="bg-black/20 rounded-xl p-3">
                         <p className="text-[10px] text-white/60 uppercase mb-1">Lucro Bruto</p>
-                        <p className="text-lg font-bold font-mono">R$ {currentCalculation.profit.toFixed(2)}</p>
+                        <p className="text-lg font-bold font-mono">R$ {formatMoney(currentCalculation.profit)}</p>
                       </div>
                       <div className="bg-black/20 rounded-xl p-3">
                         <p className="text-[10px] text-white/60 uppercase mb-1">Margem</p>
@@ -1129,7 +1133,7 @@ export default function App() {
                           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                             <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100">
                               <p className="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Custo</p>
-                              <p className="font-mono font-bold text-xs">R$ {product.costPrice.toFixed(2)}</p>
+                              <p className="font-mono font-bold text-xs">R$ {formatMoney(product.costPrice)}</p>
                             </div>
                             <div className={`p-2 rounded-xl border transition-all duration-300 ${
                               product.originalPrice !== undefined && product.price !== product.originalPrice
@@ -1159,9 +1163,15 @@ export default function App() {
                                     : 'text-gray-400'
                                 }`}>R$</span>
                                 <input 
-                                  type="number"
-                                  value={product.price}
-                                  onChange={(e) => updateProductPrice(product.id, Number(e.target.value))}
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={product.price.toFixed(2).replace('.', ',')}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(',', '.');
+                                    if (!isNaN(Number(val)) || val === '' || val === '.') {
+                                      updateProductPrice(product.id, Number(val));
+                                    }
+                                  }}
                                   className={`w-full bg-transparent font-mono font-bold text-xs focus:outline-none rounded px-1 -ml-1 border-b border-dashed transition-all ${
                                     product.originalPrice !== undefined && product.price !== product.originalPrice
                                       ? 'text-orange-700 border-orange-300 focus:border-orange-500' 
@@ -1180,11 +1190,11 @@ export default function App() {
                             </div>
                             <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100">
                               <p className="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Taxas</p>
-                              <p className="font-mono font-bold text-xs text-red-500">R$ {totalCost.toFixed(2)}</p>
+                              <p className="font-mono font-bold text-xs text-red-500">R$ {formatMoney(totalCost)}</p>
                             </div>
                             <div className={`${profit >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'} p-2 rounded-xl border`}>
-                              <p className={`text-[9px] font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'} uppercase mb-0.5`}>Lucro</p>
-                              <p className={`font-mono font-bold text-xs ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>R$ {profit.toFixed(2)}</p>
+                              <p className={`text-[9px] font-bold ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'} uppercase mb-1`}>Lucro</p>
+                              <p className={`font-mono font-bold text-xs ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>R$ {formatMoney(profit)}</p>
                             </div>
                             <div className={`${costs.margin >= targetCompanyMargin ? 'bg-emerald-50 border-emerald-100' : costs.margin > 0 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-100'} p-2 rounded-xl border transition-colors duration-300`}>
                               <p className={`text-[9px] font-bold ${costs.margin >= targetCompanyMargin ? 'text-emerald-600' : costs.margin > 0 ? 'text-orange-600' : 'text-red-600'} uppercase mb-0.5`}>Margem</p>
@@ -1209,24 +1219,24 @@ export default function App() {
                                     <div className="space-y-2">
                                       <div className="flex justify-between items-center text-xs">
                                         <span className="text-gray-500">Preço de Venda</span>
-                                        <span className="font-mono font-bold">R$ {product.price.toFixed(2)}</span>
+                                        <span className="font-mono font-bold">R$ {formatMoney(product.price)}</span>
                                       </div>
                                       <div className="flex justify-between items-center text-xs">
                                         <span className="text-gray-500">Custo da Mercadoria</span>
-                                        <span className="font-mono text-orange-600">- R$ {product.costPrice.toFixed(2)}</span>
+                                        <span className="font-mono text-orange-600">- R$ {formatMoney(product.costPrice)}</span>
                                       </div>
                                       <div className="flex justify-between items-center text-xs">
                                         <span className="text-gray-500">Comissão Marketplace ({costs.adFeePercent.toFixed(1)}%)</span>
-                                        <span className="font-mono text-red-500">- R$ {costs.adFee.toFixed(2)}</span>
+                                        <span className="font-mono text-red-500">- R$ {formatMoney(costs.adFee)}</span>
                                       </div>
                                       <div className="flex justify-between items-center text-xs">
                                         <span className="text-gray-500">Frete de Envio</span>
-                                        <span className="font-mono text-red-500">- R$ {costs.shipping.toFixed(2)}</span>
+                                        <span className="font-mono text-red-500">- R$ {formatMoney(costs.shipping)}</span>
                                       </div>
                                       <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-sm font-bold">
                                         <span className="text-gray-900">Resultado Líquido</span>
                                         <span className={profit >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-                                          R$ {profit.toFixed(2)}
+                                          R$ {formatMoney(profit)}
                                         </span>
                                       </div>
                                     </div>
