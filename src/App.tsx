@@ -289,10 +289,11 @@ export default function App() {
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(p => 
-        p.sku.toLowerCase().includes(query) || 
-        p.name.toLowerCase().includes(query)
-      );
+      result = result.filter(p => {
+        const sku = (p.sku || '').toString().toLowerCase();
+        const name = (p.name || '').toString().toLowerCase();
+        return sku.includes(query) || name.includes(query);
+      });
     }
 
     if (showBelowTargetOnly) {
@@ -318,33 +319,35 @@ export default function App() {
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
     const processData = (data: any[]) => {
-      const newProducts: Product[] = data.map((row: any) => {
-        const mkt = (row.marketplace || 'mercadolivre').toLowerCase().replace(/\s/g, '') as 'mercadolivre' | 'shopee';
-        const type = (row.adType || 'classic').toLowerCase() as 'classic' | 'premium' | 'shopee';
-        const cost = Number(row.costPrice) || 0;
-        const sellPrice = Number(row.price) || 0;
-        const w = Number(row.weight) || 0;
+      const newProducts: Product[] = data
+        .filter(row => row && (row.sku || row.name)) // Skip empty rows
+        .map((row: any) => {
+          const mkt = String(row.marketplace || 'mercadolivre').toLowerCase().trim().replace(/\s/g, '') as 'mercadolivre' | 'shopee';
+          const type = String(row.adType || 'classic').toLowerCase().trim() as 'classic' | 'premium' | 'shopee';
+          const cost = Number(row.costPrice) || 0;
+          const sellPrice = Number(row.price) || 0;
+          const w = Number(row.weight) || 0;
 
-        const costs = calculateProductCosts({
-          price: sellPrice,
-          weight: w,
-          marketplace: mkt,
-          adType: type,
-          costPrice: cost
+          const costs = calculateProductCosts({
+            price: sellPrice,
+            weight: w,
+            marketplace: mkt,
+            adType: type,
+            costPrice: cost
+          });
+
+          return {
+            id: crypto.randomUUID(),
+            sku: String(row.sku || 'N/A'),
+            name: String(row.name || 'Produto Sem Nome'),
+            price: sellPrice,
+            costPrice: cost,
+            weight: w,
+            adType: mkt === 'shopee' ? 'shopee' : (type === 'premium' ? 'premium' : 'classic'),
+            marketplace: mkt === 'shopee' ? 'shopee' : 'mercadolivre',
+            margin: costs.margin
+          };
         });
-
-        return {
-          id: crypto.randomUUID(),
-          sku: row.sku || 'N/A',
-          name: row.name || 'Produto Sem Nome',
-          price: sellPrice,
-          costPrice: cost,
-          weight: w,
-          adType: mkt === 'shopee' ? 'shopee' : type as 'classic' | 'premium',
-          marketplace: mkt,
-          margin: costs.margin
-        };
-      });
 
       setProducts(prev => [...newProducts, ...prev]);
       if (fileInputRef.current) fileInputRef.current.value = '';
