@@ -22,6 +22,7 @@ interface Product {
   marketplace: 'mercadolivre' | 'shopee';
   margin: number;
   originalPrice?: number;
+  originalAdType?: 'classic' | 'premium' | 'shopee';
 }
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [summaryFilter, setSummaryFilter] = useState<'all' | 'mercadolivre' | 'shopee'>('all');
+  const [adTypeFilter, setAdTypeFilter] = useState<'all' | 'classic' | 'premium'>('all');
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showBelowTargetOnly, setShowBelowTargetOnly] = useState(false);
@@ -228,6 +230,33 @@ export default function App() {
     }));
   };
 
+  const updateProductAdType = (id: string, newAdType: 'classic' | 'premium') => {
+    setProducts(prev => prev.map(p => {
+      if (p.id === id) {
+        const costs = calculateProductCosts({
+          price: p.price,
+          weight: p.weight,
+          marketplace: p.marketplace,
+          adType: newAdType,
+          costPrice: p.costPrice
+        });
+        const originalAdType = p.originalAdType ?? p.adType;
+        return { ...p, adType: newAdType, margin: costs.margin, originalAdType };
+      }
+      return p;
+    }));
+  };
+
+  const confirmAdTypeUpdate = (id: string) => {
+    setProducts(prev => prev.map(p => {
+      if (p.id === id) {
+        const { originalAdType, ...rest } = p;
+        return { ...rest, originalAdType: undefined };
+      }
+      return p;
+    }));
+  };
+
   const calculateProductCosts = (product: Partial<Product> & { price: number, weight: number, marketplace: string, adType: string }) => {
     let shipping = 0;
     let adFee = 0;
@@ -252,9 +281,13 @@ export default function App() {
   };
 
   const globalSummary = useMemo(() => {
-    const filteredForSummary = summaryFilter === 'all' 
+    let filteredForSummary = summaryFilter === 'all' 
       ? products 
       : products.filter(p => p.marketplace === summaryFilter);
+
+    if (summaryFilter === 'mercadolivre' && adTypeFilter !== 'all') {
+      filteredForSummary = filteredForSummary.filter(p => p.adType === adTypeFilter);
+    }
 
     if (filteredForSummary.length === 0) return null;
 
@@ -282,13 +315,17 @@ export default function App() {
       totalProfit: 0,
       count: 0
     });
-  }, [products, summaryFilter]);
+  }, [products, summaryFilter, adTypeFilter]);
 
   const filteredProducts = useMemo(() => {
     let result = products;
     
     if (summaryFilter !== 'all') {
       result = result.filter(p => p.marketplace === summaryFilter);
+    }
+
+    if (summaryFilter === 'mercadolivre' && adTypeFilter !== 'all') {
+      result = result.filter(p => p.adType === adTypeFilter);
     }
     
     if (searchQuery) {
@@ -315,7 +352,7 @@ export default function App() {
     }
     
     return result;
-  }, [products, searchQuery, summaryFilter, showBelowTargetOnly, targetCompanyMargin]);
+  }, [products, searchQuery, summaryFilter, adTypeFilter, showBelowTargetOnly, targetCompanyMargin]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -494,25 +531,60 @@ export default function App() {
               <BarChart3 className="w-4 h-4" />
               Resumo Geral
             </h3>
-            <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
-              <button 
-                onClick={() => setSummaryFilter('all')}
-                className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${summaryFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Todos
-              </button>
-              <button 
-                onClick={() => setSummaryFilter('mercadolivre')}
-                className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${summaryFilter === 'mercadolivre' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Mercado Livre
-              </button>
-              <button 
-                onClick={() => setSummaryFilter('shopee')}
-                className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${summaryFilter === 'shopee' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Shopee
-              </button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
+                <button 
+                  onClick={() => {
+                    setSummaryFilter('all');
+                    setAdTypeFilter('all');
+                  }}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${summaryFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Todos
+                </button>
+                <button 
+                  onClick={() => setSummaryFilter('mercadolivre')}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${summaryFilter === 'mercadolivre' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Mercado Livre
+                </button>
+                <button 
+                  onClick={() => {
+                    setSummaryFilter('shopee');
+                    setAdTypeFilter('all');
+                  }}
+                  className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${summaryFilter === 'shopee' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Shopee
+                </button>
+              </div>
+
+              {summaryFilter === 'mercadolivre' && (
+                <motion.div 
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex bg-blue-50/50 p-1 rounded-xl gap-1 border border-blue-100"
+                >
+                  <button 
+                    onClick={() => setAdTypeFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${adTypeFilter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-blue-400 hover:text-blue-600'}`}
+                  >
+                    Todos ML
+                  </button>
+                  <button 
+                    onClick={() => setAdTypeFilter('classic')}
+                    className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${adTypeFilter === 'classic' ? 'bg-blue-600 text-white shadow-sm' : 'text-blue-400 hover:text-blue-600'}`}
+                  >
+                    Clássico
+                  </button>
+                  <button 
+                    onClick={() => setAdTypeFilter('premium')}
+                    className={`px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all ${adTypeFilter === 'premium' ? 'bg-blue-600 text-white shadow-sm' : 'text-blue-400 hover:text-blue-600'}`}
+                  >
+                    Premium
+                  </button>
+                </motion.div>
+              )}
             </div>
           </div>
 
@@ -989,13 +1061,46 @@ export default function App() {
                                 }`}>
                                   {product.sku}
                                 </span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-sm ${
-                                  product.marketplace === 'mercadolivre' 
-                                    ? 'bg-[#FFE600] text-[#2D3277]' 
-                                    : 'bg-[#EE4D2D] text-white'
-                                }`}>
-                                  {product.marketplace === 'mercadolivre' ? `ML ${product.adType}` : 'Shopee'}
-                                </span>
+                                {product.marketplace === 'mercadolivre' ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <button 
+                                      onClick={() => updateProductAdType(product.id, product.adType === 'classic' ? 'premium' : 'classic')}
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-sm transition-all flex items-center gap-1 ${
+                                        product.originalAdType !== undefined && product.adType !== product.originalAdType
+                                          ? 'bg-orange-500 text-white ring-2 ring-orange-500/20' 
+                                          : 'bg-[#FFE600] text-[#2D3277] hover:bg-[#F0D800]'
+                                      }`}
+                                      title="Clique para alternar entre Clássico e Premium"
+                                    >
+                                      ML {product.adType}
+                                      {product.originalAdType !== undefined && product.adType !== product.originalAdType && (
+                                        <Info className="w-2.5 h-2.5" />
+                                      )}
+                                    </button>
+                                    {product.originalAdType !== undefined && product.adType !== product.originalAdType && (
+                                      <div className="flex items-center gap-1">
+                                        <button 
+                                          onClick={() => confirmAdTypeUpdate(product.id)}
+                                          className="p-1 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
+                                          title="Confirmar alteração de tipo de anúncio"
+                                        >
+                                          <Plus className="w-3 h-3 rotate-45" />
+                                        </button>
+                                        <span className="text-[8px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full border border-orange-200 whitespace-nowrap">
+                                          TIPO ALTERADO
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase shadow-sm ${
+                                    product.marketplace === 'mercadolivre' 
+                                      ? 'bg-[#FFE600] text-[#2D3277]' 
+                                      : 'bg-[#EE4D2D] text-white'
+                                  }`}>
+                                    {product.marketplace === 'mercadolivre' ? `ML ${product.adType}` : 'Shopee'}
+                                  </span>
+                                )}
                               </div>
                               <h3 className="font-semibold text-gray-900">{product.name}</h3>
                             </div>
