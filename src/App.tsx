@@ -12,6 +12,7 @@ import { SHIPPING_RATES, PRICE_RANGES, SHOPEE_RULES } from './constants';
 
 interface Product {
   id: string;
+  adId?: string;
   sku: string;
   name: string;
   price: number;
@@ -25,6 +26,7 @@ interface Product {
 
 export default function App() {
   const [sku, setSku] = useState('');
+  const [adId, setAdId] = useState('');
   const [name, setName] = useState('');
   const [costPrice, setCostPrice] = useState<number | ''>('');
   const [price, setPrice] = useState<number | ''>('');
@@ -173,6 +175,7 @@ export default function App() {
 
     const newProduct: Product = {
       id: crypto.randomUUID(),
+      adId: adId || undefined,
       sku,
       name,
       price: currentCalculation.price,
@@ -185,6 +188,7 @@ export default function App() {
 
     setProducts([newProduct, ...products]);
     setSku('');
+    setAdId('');
     setName('');
     setPrice('');
     setWeight('');
@@ -292,7 +296,8 @@ export default function App() {
       result = result.filter(p => {
         const sku = (p.sku || '').toString().toLowerCase();
         const name = (p.name || '').toString().toLowerCase();
-        return sku.includes(query) || name.includes(query);
+        const adId = (p.adId || '').toString().toLowerCase();
+        return sku.includes(query) || name.includes(query) || adId.includes(query);
       });
     }
 
@@ -338,6 +343,7 @@ export default function App() {
 
           return {
             id: crypto.randomUUID(),
+            adId: row.adId ? String(row.adId) : undefined,
             sku: String(row.sku || 'N/A'),
             name: String(row.name || 'Produto Sem Nome'),
             price: sellPrice,
@@ -377,13 +383,13 @@ export default function App() {
 
   const downloadTemplate = (format: 'csv' | 'xlsx') => {
     const data = [
-      { sku: "PROD-001", name: "Exemplo Produto", costPrice: 50.00, price: 120.00, weight: 0.5, marketplace: "mercadolivre", adType: "premium" },
-      { sku: "PROD-002", name: "Outro Exemplo", costPrice: 30.00, price: 85.00, weight: 0.2, marketplace: "shopee", adType: "shopee" }
+      { adId: "MLB123456789", sku: "PROD-001", name: "Exemplo Produto", costPrice: 50.00, price: 120.00, weight: 0.5, marketplace: "mercadolivre", adType: "premium" },
+      { adId: "SHP987654321", sku: "PROD-002", name: "Outro Exemplo", costPrice: 30.00, price: 85.00, weight: 0.2, marketplace: "shopee", adType: "shopee" }
     ];
 
     if (format === 'csv') {
-      const csvContent = "sku,name,costPrice,price,weight,marketplace,adType\n" + 
-        data.map(row => `${row.sku},${row.name},${row.costPrice},${row.price},${row.weight},${row.marketplace},${row.adType}`).join("\n");
+      const csvContent = "adId,sku,name,costPrice,price,weight,marketplace,adType\n" + 
+        data.map(row => `${row.adId},${row.sku},${row.name},${row.costPrice},${row.price},${row.weight},${row.marketplace},${row.adType}`).join("\n");
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
@@ -689,6 +695,19 @@ export default function App() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">ID do Anúncio</label>
+                    <div className="relative">
+                      <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.inputIcon}`} />
+                      <input 
+                        type="text" 
+                        value={adId}
+                        onChange={(e) => setAdId(e.target.value)}
+                        placeholder="Ex: MLB123456789"
+                        className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 ${theme.ring} ${theme.focusBorder} transition-all text-sm`}
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">SKU</label>
                     <div className="relative">
                       <Tag className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.inputIcon}`} />
@@ -701,7 +720,10 @@ export default function App() {
                       />
                     </div>
                   </div>
-                  <div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-1">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Custo do Produto (R$)</label>
                     <div className="relative">
                       <DollarSign className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${theme.inputIcon}`} />
@@ -905,7 +927,7 @@ export default function App() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Filtrar por SKU ou Nome..."
+                      placeholder="Filtrar por SKU, Nome ou ID..."
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-xs"
                     />
                     {searchQuery && (
@@ -957,6 +979,11 @@ export default function App() {
                           <div className="flex justify-between items-start mb-4">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
+                                {product.adId && (
+                                  <span className="text-[10px] font-mono font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                    {product.adId}
+                                  </span>
+                                )}
                                 <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded uppercase ${
                                   product.marketplace === 'mercadolivre' ? 'text-blue-700 bg-blue-50' : 'text-orange-700 bg-orange-50'
                                 }`}>
